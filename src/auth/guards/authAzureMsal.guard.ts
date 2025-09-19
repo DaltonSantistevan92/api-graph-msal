@@ -1,32 +1,4 @@
 
-// import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
-// import { AuthGuard } from '@nestjs/passport';
-
-// @Injectable()
-// export class AuthAzureMsalGuards extends AuthGuard('azure-msal') implements CanActivate {
-//     // async canActivate(context: ExecutionContext) {
-//     //     return (await super.canActivate(context));
-//     // }
-
-//   //   async canActivate(context: ExecutionContext): Promise<boolean> {
-//   //     return super.canActivate(context) as Promise<boolean>;
-//   // }
-
-//     async canActivate(context: ExecutionContext) : Promise< boolean > {
-//         const activate = (await super.canActivate(context)) as boolean;
-//         // console.log({activate});
-        
-//         const request = context.switchToHttp().getRequest();
-
-//         // console.log({request});
-
-//         await super.logIn(request);
-//         return activate;
-//       }
-// }
-
-
-
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';

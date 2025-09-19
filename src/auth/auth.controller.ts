@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, InternalServerErrorException, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpStatus, InternalServerErrorException, Param, Patch, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from './guards/roles.guard';
@@ -13,7 +13,7 @@ import { Auth, Token } from './decorators';
 export class AuthController {
 
   constructor(private readonly authService: AuthService) { }
- 
+
   @Get('login')
   async login(
     @Res() res: Response
@@ -28,11 +28,15 @@ export class AuthController {
     @Query('code') code: string,
     @Res() res: Response,
   ): Promise<void> {
+    // console.log('code',code);
+
     const tokenResponse = await this.authService.handleRedirect(req, code);
     const accessToken = tokenResponse.accessToken;
 
+    console.log('accessToken', accessToken);
+
     // Establece la cookie
-    res.cookie('token', accessToken, { httpOnly: false , maxAge: 3600000 }); //si es HTTP
+    res.cookie('token', accessToken, { httpOnly: false, maxAge: 3600000 }); //si es HTTP
     // res.cookie('token', accessToken, {
     //   httpOnly: true,
     //   secure: true,
@@ -50,7 +54,7 @@ export class AuthController {
   // @UseGuards(AuthGuard('azure-msal'))
   // @UseGuards(AuthAzureMsalGuards)
   async logout(
-    @Req() req, 
+    @Req() req,
     @Res() res
   ) {
     const logoutUrl = await this.authService.getLogoutUrl(req);
@@ -59,11 +63,11 @@ export class AuthController {
     return res.redirect(logoutUrl);
   }
 
- 
+
   @Get('profile')
   @UseGuards(AuthAzureMsalGuards)
   async getUserProfile(
-    @Token() token: string,  
+    @Token() token: string,
     @Res() res: Response,
   ): Promise<any> {
     try {
@@ -78,7 +82,7 @@ export class AuthController {
   @Get('myFilesAll')
   @UseGuards(AuthAzureMsalGuards)
   async getAllFiles(
-    @Token() token: string,  
+    @Token() token: string,
     @Res() res: Response,
   ): Promise<any> {
     try {
@@ -92,20 +96,99 @@ export class AuthController {
 
 
   @Get('filesInFolder')
-    @UseGuards(AuthAzureMsalGuards)
-    async getFilesInFolder(
-        @Token() token: string,
-        @Query('folderId') folderId: string,
-        @Res() res: Response,
-    ): Promise<any> {
-      console.log(folderId);
-        try {
-          
-            const response = await this.authService.getFilesInFolder(folderId, token);
-            res.status(HttpStatus.OK).send(response.data);
-        } catch (error) {
-            const errMessage = 'Error getting files in folder: ' + error.message;
-            throw new InternalServerErrorException(errMessage);
-        }
+  @UseGuards(AuthAzureMsalGuards)
+  async getFilesInFolder(
+    @Token() token: string,
+    @Query('folderId') folderId: string,
+    @Res() res: Response,
+  ): Promise<any> {
+    console.log(folderId);
+    try {
+
+      const response = await this.authService.getFilesInFolder(folderId, token);
+      res.status(HttpStatus.OK).send(response.data);
+    } catch (error) {
+      const errMessage = 'Error getting files in folder: ' + error.message;
+      throw new InternalServerErrorException(errMessage);
     }
+  }
+
+  @Get('calendar')
+  @UseGuards(AuthAzureMsalGuards)
+  async getCalendar(
+    @Token() token: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const calendar = await this.authService.getCalendarEvents(token);
+      return res.status(HttpStatus.OK).json(calendar);
+    } catch {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ message: 'Error en calendario' });
+    }
+  }
+
+  @Get('calendars')
+  @UseGuards(AuthAzureMsalGuards)
+  async getCalendars(
+    @Token() token: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const calendars = await this.authService.getUserCalendars(token);
+      return res.status(HttpStatus.OK).json(calendars);
+    } catch {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ message: 'Error obteniendo calendarios' });
+    }
+  }
+
+  @Post('calendar/event')
+  @UseGuards(AuthAzureMsalGuards)
+  async createEvent(
+    @Token() token: string,
+    @Body() eventData: any,
+    @Res() res: Response,
+  ) {
+    try {
+      const newEvent = await this.authService.createCalendarEvent(token, eventData);
+      return res.status(HttpStatus.CREATED).json(newEvent);
+    } catch (error) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ message: 'Error creando evento' });
+    }
+  }
+
+  @Delete('calendar/event/:id')
+  @UseGuards(AuthAzureMsalGuards)
+  async deleteEvent(
+    @Token() token: string,
+    @Param('id') eventId: string,
+    @Res() res: Response,
+  ) {
+    try {
+      await this.authService.deleteCalendarEvent(token, eventId);
+      return res.status(HttpStatus.NO_CONTENT).send();
+    } catch (error) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ message: 'Error eliminando evento' });
+    }
+  }
+
+  @Patch('calendar/event/:id')
+  @UseGuards(AuthAzureMsalGuards)
+  async updateEvent(
+    @Token() token: string,
+    @Param('id') eventId: string,
+    @Body() updateData: any,
+    @Res() res: Response,
+  ) {
+    try {
+      const updatedEvent = await this.authService.updateCalendarEvent(token, eventId, updateData);
+      return res.status(HttpStatus.OK).json(updatedEvent);
+    } catch (error) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ message: 'Error actualizando evento' });
+    }
+  }
+
+
+
+
+
 }
